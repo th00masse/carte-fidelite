@@ -309,38 +309,67 @@ app.get('/scanner/:id', (req, res) => {
   const cliente = db.prepare('SELECT * FROM clientes WHERE id = ?').get(req.params.id);
   if (!cliente) return res.send('Carte non trouvée');
 
+  const recompenseDisponible = db.prepare('SELECT * FROM recompenses WHERE cliente_id = ? AND utilisee = 0').get(cliente.id);
+
   res.send(`
     <!DOCTYPE html>
     <html lang="fr">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ma Carte Fidélité</title>
+      <title>Blossom — Ma Carte Fidélité</title>
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Montserrat:wght@300;400;500&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Georgia',serif; background:#3d2314; color:#fdf6f0; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
-        .carte { background:linear-gradient(135deg, #8B4513, #3d2314); border-radius:20px; padding:30px; width:100%; max-width:340px; box-shadow:0 10px 40px rgba(0,0,0,0.4); text-align:center; }
-        h1 { font-size:13px; letter-spacing:4px; opacity:0.8; margin-bottom:5px; }
-        h2 { font-size:24px; margin-bottom:20px; }
-        .tampons { display:flex; gap:8px; justify-content:center; margin:20px 0; }
-        .tampon { width:45px; height:45px; border-radius:50%; border:2px solid rgba(255,255,255,0.4); display:flex; align-items:center; justify-content:center; font-size:20px; }
-        .tampon.plein { background:rgba(255,255,255,0.2); border-color:white; }
-        p { font-size:13px; opacity:0.7; margin-top:15px; }
+        body { font-family:'Montserrat',sans-serif; background:#F5EFE6; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 20px; }
+        .logo-text { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:300; color:#6B3A2A; letter-spacing:8px; text-align:center; margin-bottom:4px; }
+        .logo-sub { font-size:10px; font-weight:300; color:#9C7B6E; letter-spacing:4px; text-align:center; margin-bottom:50px; }
+        .carte { background:white; border-radius:24px; padding:40px 30px; width:100%; max-width:360px; box-shadow:0 8px 40px rgba(107,58,42,0.08); }
+        .bonjour { font-family:'Cormorant Garamond',serif; font-size:13px; font-weight:300; color:#9C7B6E; letter-spacing:3px; text-align:center; margin-bottom:6px; }
+        .prenom { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:300; color:#6B3A2A; text-align:center; margin-bottom:40px; }
+        .tampons-label { font-size:9px; font-weight:500; color:#9C7B6E; letter-spacing:3px; text-align:center; margin-bottom:20px; }
+        .tampons { display:flex; justify-content:center; gap:12px; margin-bottom:16px; }
+        .tampon { width:44px; height:44px; border-radius:50%; border:1px solid #D4B8B0; display:flex; align-items:center; justify-content:center; }
+        .tampon.plein { background:#6B3A2A; border-color:#6B3A2A; }
+        .tampon.plein::after { content:''; width:14px; height:14px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F5EFE6'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E") center/contain no-repeat; display:block; }
+        .tampon.vide::after { content:''; width:8px; height:8px; border-radius:50%; background:#D4B8B0; display:block; }
+        .progression { font-size:10px; font-weight:300; color:#9C7B6E; letter-spacing:2px; text-align:center; margin-bottom:40px; }
+        .separateur { width:40px; height:1px; background:#D4B8B0; margin:0 auto 30px; }
+        .recompense-titre { font-size:9px; font-weight:500; color:#9C7B6E; letter-spacing:3px; text-align:center; margin-bottom:12px; }
+        .recompense-texte { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:300; font-style:italic; color:#6B3A2A; text-align:center; line-height:1.6; }
+        .message-reward { background:#F5EFE6; border-radius:16px; padding:24px; text-align:center; margin-top:30px; }
+        .reward-emoji { font-size:28px; margin-bottom:10px; }
+        .reward-titre { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:300; color:#6B3A2A; margin-bottom:6px; }
+        .reward-sub { font-size:10px; color:#9C7B6E; letter-spacing:2px; }
+        .total { font-size:10px; color:#C4A99E; letter-spacing:2px; text-align:center; margin-top:30px; }
       </style>
     </head>
     <body>
+      <div class="logo-text">BLOSSOM</div>
+      <div class="logo-sub">ÉPILATION · VAJACIAL</div>
       <div class="carte">
-        <h1>CARTE FIDÉLITÉ ✨</h1>
-        <h2>${cliente.prenom} ${cliente.nom}</h2>
+        <div class="bonjour">BIENVENUE</div>
+        <div class="prenom">${cliente.prenom}</div>
+        <div class="tampons-label">VOTRE FIDÉLITÉ</div>
         <div class="tampons">
           ${Array.from({length: 5}, (_, i) => `
-            <div class="tampon ${i < cliente.tampons ? 'plein' : ''}">
-              ${i < cliente.tampons ? '✨' : ''}
-            </div>
+            <div class="tampon ${i < cliente.tampons ? 'plein' : 'vide'}"></div>
           `).join('')}
         </div>
-        <p>${cliente.tampons}/5 — encore ${5 - cliente.tampons} soin${5 - cliente.tampons > 1 ? 's' : ''} pour ta récompense ✨</p>
-        <p style="margin-top:10px;font-size:11px;opacity:0.5">${cliente.total_passages} passages au total</p>
+        <div class="progression">${cliente.tampons} soin${cliente.tampons > 1 ? 's' : ''} sur 5</div>
+        <div class="separateur"></div>
+        <div class="recompense-titre">VOTRE RÉCOMPENSE</div>
+        <div class="recompense-texte">
+          Au 5ème soin,<br>profitez d'un soin des aisselles offert
+        </div>
+        ${recompenseDisponible ? `
+        <div class="message-reward">
+          <div class="reward-emoji">🌸</div>
+          <div class="reward-titre">Félicitations</div>
+          <div class="reward-sub">VOTRE RÉCOMPENSE VOUS ATTEND</div>
+        </div>
+        ` : ''}
+        <div class="total">${cliente.total_passages} soin${cliente.total_passages > 1 ? 's' : ''} au total</div>
       </div>
     </body>
     </html>
