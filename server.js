@@ -6,7 +6,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const pool = mysql.createPool(process.env.MYSQL_URL);
+const pool = mysql.createPool({
+  uri: process.env.MYSQL_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  ssl: { rejectUnauthorized: false }
+});
 
 async function initDB() {
   await pool.query(`
