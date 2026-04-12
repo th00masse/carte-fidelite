@@ -7,7 +7,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const pool = mysql.createPool({
-  uri: process.env.MYSQL_URL,
+  host: process.env.MYSQLHOST,
+  port: process.env.MYSQLPORT,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
   waitForConnections: true,
   connectionLimit: 10,
   ssl: { rejectUnauthorized: false }
