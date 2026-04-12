@@ -1,7 +1,7 @@
 const express = require('express');
 const Database = require('better-sqlite3');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 
 const app = express();
 app.use(express.json());
@@ -166,7 +166,7 @@ app.post('/nouvelle-cliente', (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(id, nom, prenom, telephone || '', email || '');
 
-  res.redirect(`/cliente/${id}`);
+  res.redirect(`/cliente/${id}?nouveau=1`);
 });
 
 // PAGE - Fiche cliente
@@ -177,9 +177,11 @@ app.get('/cliente/:id', async (req, res) => {
   const passages = db.prepare('SELECT * FROM passages WHERE cliente_id = ? ORDER BY date_passage DESC').all(cliente.id);
   const recompenses = db.prepare('SELECT * FROM recompenses WHERE cliente_id = ? ORDER BY date_obtention DESC').all(cliente.id);
   const recompenseDisponible = recompenses.find(r => !r.utilisee);
+  const isNew = req.query.nouveau === '1';
 
-  const qrUrl = `http://localhost:3000/scanner/${cliente.id}`;
-  const qrCode = await QRCode.toDataURL(qrUrl, { width: 200, margin: 1, color: { dark: '#3d2314', light: '#fdf6f0' } });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const clientUrl = `${baseUrl}/scanner/${cliente.id}`;
+  const qrCode = await QRCode.toDataURL(clientUrl, { width: 200, margin: 1, color: { dark: '#3d2314', light: '#fdf6f0' } });
 
   const listePassages = passages.map(p => `
     <div style="padding:10px 0;border-bottom:1px solid #f0e6e0;font-size:14px">
@@ -220,6 +222,19 @@ app.get('/cliente/:id', async (req, res) => {
       <div class="container">
         <a href="/" class="btn-retour">← Retour</a>
 
+        ${isNew ? `
+        <div class="card" style="border:2px solid #8B4513;text-align:center;background:#fff8f4">
+          <div style="font-size:36px;margin-bottom:8px">🎉</div>
+          <h3 style="color:#8B4513;margin-bottom:8px;font-size:17px">Carte créée avec succès !</h3>
+          <p style="font-size:14px;color:#666;margin-bottom:15px">Envoie ce lien à <strong>${cliente.prenom}</strong> pour qu'elle accède à sa carte :</p>
+          <div style="background:#fdf6f0;border-radius:10px;padding:12px;margin-bottom:15px;word-break:break-all;font-size:13px;color:#3d2314;border:1px solid #e0cfc8">${clientUrl}</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button onclick="copyLink('${clientUrl}', this)" class="btn" style="font-size:14px">📋 Copier le lien</button>
+            ${cliente.telephone ? `<a href="https://wa.me/${cliente.telephone.replace(/\D/g,'')}?text=${encodeURIComponent('Bonjour ' + cliente.prenom + ' ! Voici ta carte fidélité : ' + clientUrl)}" target="_blank" class="btn" style="background:#25D366;font-size:14px">💬 Envoyer sur WhatsApp</a>` : ''}
+          </div>
+        </div>
+        ` : ''}
+
         ${recompenseDisponible ? `
         <div class="card" style="border:2px solid #27ae60;text-align:center">
           <div style="font-size:30px">🎁</div>
@@ -256,9 +271,13 @@ app.get('/cliente/:id', async (req, res) => {
         </div>
 
         <div class="card" style="text-align:center">
-          <h3 style="margin-bottom:15px;font-size:15px;letter-spacing:1px">QR CODE CLIENTE</h3>
+          <h3 style="margin-bottom:15px;font-size:15px;letter-spacing:1px">🔗 LIEN & QR CODE CLIENTE</h3>
           <img src="${qrCode}" style="border-radius:10px">
-          <p style="font-size:12px;color:#999;margin-top:10px">La cliente peut scanner ce QR code</p>
+          <p style="font-size:12px;color:#999;margin-top:10px;margin-bottom:15px">La cliente peut scanner ce QR code ou utiliser le lien</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button onclick="copyLink('${clientUrl}', this)" class="btn" style="font-size:13px">📋 Copier le lien</button>
+            ${cliente.telephone ? `<a href="https://wa.me/${cliente.telephone.replace(/\D/g,'')}?text=${encodeURIComponent('Voici ta carte fidélité : ' + clientUrl)}" target="_blank" class="btn" style="background:#25D366;font-size:13px">💬 WhatsApp</a>` : ''}
+          </div>
         </div>
 
         <div class="card">
@@ -266,6 +285,16 @@ app.get('/cliente/:id', async (req, res) => {
           ${listePassages.length > 0 ? listePassages : '<p style="color:#999;font-size:14px">Aucun passage enregistré</p>'}
         </div>
       </div>
+      <script>
+        function copyLink(url, btn) {
+          navigator.clipboard.writeText(url).then(() => {
+            const original = btn.textContent;
+            btn.textContent = '✅ Copié !';
+            btn.style.background = '#27ae60';
+            setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2500);
+          });
+        }
+      </script>
     </body>
     </html>
   `);
