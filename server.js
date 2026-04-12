@@ -1,50 +1,50 @@
 const express = require('express');
-const { Pool } = require('pg');
-const QRCode = require('qrcode');
+const mysql = require('mysql2/promise');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-});
+const pool = mysql.createPool(process.env.MYSQL_URL);
 
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS clientes (
-      id TEXT PRIMARY KEY,
+      id VARCHAR(36) PRIMARY KEY,
       nom TEXT NOT NULL,
       prenom TEXT NOT NULL,
       telephone TEXT,
       email TEXT,
-      tampons INTEGER DEFAULT 0,
-      total_passages INTEGER DEFAULT 0,
+      tampons INT DEFAULT 0,
+      total_passages INT DEFAULT 0,
       date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+    )
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS passages (
-      id SERIAL PRIMARY KEY,
-      cliente_id TEXT,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      cliente_id VARCHAR(36),
       date_passage TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       soin TEXT,
       FOREIGN KEY(cliente_id) REFERENCES clientes(id)
-    );
-    CREATE TABLE IF NOT EXISTS recompenses (
-      id SERIAL PRIMARY KEY,
-      cliente_id TEXT,
-      date_obtention TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      utilisee INTEGER DEFAULT 0,
-      FOREIGN KEY(cliente_id) REFERENCES clientes(id)
-    );
+    )
   `);
-  console.log('✅ Base de données prête');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recompenses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      cliente_id VARCHAR(36),
+      date_obtention TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      utilisee INT DEFAULT 0,
+      FOREIGN KEY(cliente_id) REFERENCES clientes(id)
+    )
+  `);
+  console.log('✅ Base de données MySQL prête');
 }
 
-// PAGE PRINCIPALE - Interface prestataire
+// PAGE PRINCIPALE
 app.get('/', async (req, res) => {
-  const { rows: clientes } = await pool.query('SELECT * FROM clientes ORDER BY nom');
+  const [clientes] = await pool.query('SELECT * FROM clientes ORDER BY nom');
 
   let listeClientes = clientes.map(c => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #F0E6E0;">
@@ -151,20 +151,20 @@ app.post('/nouvelle-cliente', async (req, res) => {
   const { nom, prenom, telephone, email } = req.body;
   const id = uuidv4();
   await pool.query(
-    'INSERT INTO clientes (id, nom, prenom, telephone, email) VALUES ($1, $2, $3, $4, $5)',
+    'INSERT INTO clientes (id, nom, prenom, telephone, email) VALUES (?, ?, ?, ?, ?)',
     [id, nom, prenom, telephone || '', email || '']
   );
   res.redirect(`/cliente/${id}`);
 });
 
-// PAGE - Fiche cliente (prestataire)
+// PAGE - Fiche cliente
 app.get('/cliente/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM clientes WHERE id = $1', [req.params.id]);
+  const [rows] = await pool.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
   const cliente = rows[0];
   if (!cliente) return res.redirect('/');
 
-  const { rows: passages } = await pool.query('SELECT * FROM passages WHERE cliente_id = $1 ORDER BY date_passage DESC', [cliente.id]);
-  const { rows: recompenses } = await pool.query('SELECT * FROM recompenses WHERE cliente_id = $1 ORDER BY date_obtention DESC', [cliente.id]);
+  const [passages] = await pool.query('SELECT * FROM passages WHERE cliente_id = ? ORDER BY date_passage DESC', [cliente.id]);
+  const [recompenses] = await pool.query('SELECT * FROM recompenses WHERE cliente_id = ? ORDER BY date_obtention DESC', [cliente.id]);
   const recompenseDisponible = recompenses.find(r => !r.utilisee);
 
   const listePassages = passages.map(p => `
@@ -260,21 +260,21 @@ app.get('/cliente/:id', async (req, res) => {
 
 // ACTION - Ajouter un tampon
 app.post('/ajouter-tampon/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM clientes WHERE id = $1', [req.params.id]);
+  const [rows] = await pool.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
   const cliente = rows[0];
   if (!cliente) return res.redirect('/');
 
   const soin = req.body.soin || '';
-  await pool.query('INSERT INTO passages (cliente_id, soin) VALUES ($1, $2)', [cliente.id, soin]);
+  await pool.query('INSERT INTO passages (cliente_id, soin) VALUES (?, ?)', [cliente.id, soin]);
 
   let nouveauxTampons = cliente.tampons + 1;
   if (nouveauxTampons >= 5) {
     nouveauxTampons = 0;
-    await pool.query('INSERT INTO recompenses (cliente_id) VALUES ($1)', [cliente.id]);
+    await pool.query('INSERT INTO recompenses (cliente_id) VALUES (?)', [cliente.id]);
   }
 
   await pool.query(
-    'UPDATE clientes SET tampons = $1, total_passages = total_passages + 1 WHERE id = $2',
+    'UPDATE clientes SET tampons = ?, total_passages = total_passages + 1 WHERE id = ?',
     [nouveauxTampons, cliente.id]
   );
 
@@ -283,21 +283,21 @@ app.post('/ajouter-tampon/:id', async (req, res) => {
 
 // ACTION - Utiliser une récompense
 app.post('/utiliser-recompense/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM recompenses WHERE id = $1', [req.params.id]);
+  const [rows] = await pool.query('SELECT * FROM recompenses WHERE id = ?', [req.params.id]);
   const recompense = rows[0];
   if (!recompense) return res.redirect('/');
-  await pool.query('UPDATE recompenses SET utilisee = 1 WHERE id = $1', [req.params.id]);
+  await pool.query('UPDATE recompenses SET utilisee = 1 WHERE id = ?', [req.params.id]);
   res.redirect(`/cliente/${recompense.cliente_id}`);
 });
 
-// PAGE - Carte cliente (vue cliente)
+// PAGE - Carte cliente
 app.get('/scanner/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM clientes WHERE id = $1', [req.params.id]);
+  const [rows] = await pool.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
   const cliente = rows[0];
   if (!cliente) return res.send('Carte non trouvée');
 
-  const { rows: recompenses } = await pool.query(
-    'SELECT * FROM recompenses WHERE cliente_id = $1 AND utilisee = 0',
+  const [recompenses] = await pool.query(
+    'SELECT * FROM recompenses WHERE cliente_id = ? AND utilisee = 0',
     [cliente.id]
   );
   const recompenseDisponible = recompenses[0];
@@ -367,12 +367,10 @@ app.get('/scanner/:id', async (req, res) => {
   `);
 });
 
-// Démarrage du serveur
+// Démarrage
 initDB().then(() => {
   app.listen(3000, () => {
-    console.log('');
     console.log('✨ Serveur Blossom démarré !');
     console.log('👉 http://localhost:3000');
-    console.log('');
   });
 });
