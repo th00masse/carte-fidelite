@@ -117,39 +117,43 @@ app.get('/nouvelle-cliente', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Nouvelle Cliente</title>
+      <title>Blossom — Nouvelle Cliente</title>
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Montserrat:wght@300;400;500&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Georgia',serif; background:#fdf6f0; color:#3d2314; }
-        .header { background:#3d2314; color:#fdf6f0; padding:20px; text-align:center; }
-        .header h1 { font-size:22px; letter-spacing:3px; }
-        .container { max-width:500px; margin:30px auto; padding:0 20px; }
-        .card { background:white; border-radius:15px; padding:25px; box-shadow:0 2px 15px rgba(139,69,19,0.1); }
-        input, select { width:100%; padding:12px; border:1px solid #e0cfc8; border-radius:10px; font-size:15px; margin-bottom:15px; font-family:'Georgia',serif; background:#fdf6f0; }
-        label { display:block; margin-bottom:5px; font-size:13px; letter-spacing:1px; color:#8B4513; }
-        .btn { background:#8B4513; color:white; padding:14px 24px; border:none; border-radius:25px; cursor:pointer; font-size:15px; width:100%; }
-        .btn-retour { background:transparent; color:#8B4513; border:1px solid #8B4513; padding:10px 20px; border-radius:25px; text-decoration:none; display:inline-block; margin-bottom:20px; font-size:13px; }
+        body { font-family:'Montserrat',sans-serif; background:#F5EFE6; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 20px; }
+        .logo-text { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:300; color:#6B3A2A; letter-spacing:8px; text-align:center; margin-bottom:4px; }
+        .logo-sub { font-size:10px; font-weight:300; color:#9C7B6E; letter-spacing:4px; text-align:center; margin-bottom:50px; }
+        .carte { background:white; border-radius:24px; padding:40px 30px; width:100%; max-width:360px; box-shadow:0 8px 40px rgba(107,58,42,0.08); }
+        .carte-titre { font-family:'Cormorant Garamond',serif; font-size:13px; font-weight:300; color:#9C7B6E; letter-spacing:3px; text-align:center; margin-bottom:30px; }
+        .separateur { width:40px; height:1px; background:#D4B8B0; margin:0 auto 30px; }
+        label { display:block; font-size:8px; letter-spacing:3px; color:#9C7B6E; margin-bottom:8px; margin-top:24px; }
+        input { width:100%; padding:10px 0; border:none; border-bottom:1px solid #D4B8B0; font-size:16px; font-family:'Cormorant Garamond',serif; background:transparent; color:#6B3A2A; outline:none; }
+        input::placeholder { color:#D4B8B0; font-style:italic; }
+        input:focus { border-bottom-color:#6B3A2A; }
+        .btn { background:#6B3A2A; color:#F5EFE6; padding:14px 24px; border:none; border-radius:25px; cursor:pointer; font-size:9px; letter-spacing:3px; width:100%; margin-top:36px; font-family:'Montserrat',sans-serif; }
+        .btn:hover { background:#4e2a1e; }
+        .btn-retour { font-size:9px; letter-spacing:2px; color:#9C7B6E; text-decoration:none; display:inline-block; margin-bottom:24px; font-family:'Montserrat',sans-serif; }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>✨ NOUVELLE CLIENTE ✨</h1>
-      </div>
-      <div class="container">
-        <a href="/" class="btn-retour">← Retour</a>
-        <div class="card">
-          <form method="POST" action="/nouvelle-cliente">
-            <label>PRÉNOM *</label>
-            <input type="text" name="prenom" required placeholder="Prénom">
-            <label>NOM *</label>
-            <input type="text" name="nom" required placeholder="Nom">
-            <label>TÉLÉPHONE</label>
-            <input type="tel" name="telephone" placeholder="06 00 00 00 00">
-            <label>EMAIL</label>
-            <input type="email" name="email" placeholder="email@exemple.com">
-            <button type="submit" class="btn">Créer la carte ✨</button>
-          </form>
-        </div>
+      <div class="logo-text">BLOSSOM</div>
+      <div class="logo-sub">ÉPILATION · VAJACIAL</div>
+      <a href="/" class="btn-retour">← RETOUR</a>
+      <div class="carte">
+        <div class="carte-titre">NOUVELLE CLIENTE</div>
+        <div class="separateur"></div>
+        <form method="POST" action="/nouvelle-cliente">
+          <label>PRÉNOM *</label>
+          <input type="text" name="prenom" required placeholder="Prénom">
+          <label>NOM *</label>
+          <input type="text" name="nom" required placeholder="Nom">
+          <label>TÉLÉPHONE</label>
+          <input type="tel" name="telephone" placeholder="06 00 00 00 00">
+          <label>EMAIL</label>
+          <input type="email" name="email" placeholder="email@exemple.com">
+          <button type="submit" class="btn">CRÉER LA CARTE</button>
+        </form>
       </div>
     </body>
     </html>
